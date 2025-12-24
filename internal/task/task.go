@@ -1,0 +1,30 @@
+package task
+
+import (
+	"context"
+	"time"
+)
+
+type TaskStatus int
+
+const (
+	StatusNew TaskStatus = iota
+	StatusInProgress
+	StatusDone
+)
+
+type Task struct {
+	ID          int        `json:"id"`
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Created     time.Time  `json:"created"`
+	Status      TaskStatus `json:"status"`
+}
+
+type TaskRepository interface {
+	Add(ctx context.Context, task *Task) error
+	GetAll(ctx context.Context) ([]Task, error)
+	GetById(ctx context.Context, id int) (*Task, error)
+	Update(ctx context.Context, task *Task) error
+	Delete(ctx context.Context, id int) error
+}
