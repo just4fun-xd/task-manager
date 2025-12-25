@@ -125,7 +125,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, id int) error {
 		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
 	if rows == 0 {
-		return fmt.Errorf("task not found")
+		return ErrTaskNotFound
 	}
 	return nil
 }

@@ -17,9 +17,11 @@ func NewService(repo TaskRepository) *Service {
 }
 
 var (
-	ErrEmptyTaskName = errors.New("task name cannot be empty")
-	ErrTaskNotFound  = errors.New("task not find")
-	ErrNewTaskStatus = errors.New("cannot jump from New to Done: start working first")
+	ErrEmptyTaskName    = errors.New("task name cannot be empty")
+	ErrTaskNotFound     = errors.New("task not found")
+	ErrNewTaskStatus    = errors.New("cannot jump from New to Done: start working first")
+	ErrInProgressDelete = errors.New("cannot delete task with InProgress status")
+	ErrDoneEdit         = errors.New("cannot edit done task")
 )
 
 func (s *Service) CreateTask(ctx context.Context, name, description string) (*Task, error) {
@@ -61,12 +63,9 @@ func (s *Service) GetAllTasks(ctx context.Context) ([]Task, error) {
 
 func (s *Service) UpdateTask(ctx context.Context, id int, name, description string, status TaskStatus) (*Task, error) {
 	// вначале достать задачу по id
-	task, err := s.repo.GetById(ctx, id)
+	task, err := s.GetTask(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get task: %w", err)
-	}
-	if task == nil {
-		return nil, ErrTaskNotFound
+		return nil, fmt.Errorf("failed to get task for update: %w", err)
 	}
 	// проверяем валидность имени задачи
 	if strings.TrimSpace(name) == "" {
@@ -74,6 +73,9 @@ func (s *Service) UpdateTask(ctx context.Context, id int, name, description stri
 	}
 	if task.Status == StatusNew && status == StatusDone {
 		return nil, ErrNewTaskStatus
+	}
+	if task.Status == StatusDone {
+		return nil, ErrDoneEdit
 	}
 
 	task.Name = name
@@ -85,4 +87,19 @@ func (s *Service) UpdateTask(ctx context.Context, id int, name, description stri
 		return nil, fmt.Errorf("failed to update task: %w", err)
 	}
 	return task, err
+}
+
+func (s *Service) DeleteTask(ctx context.Context, id int) error {
+	task, err := s.GetTask(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to get task for delete: %w", err)
+	}
+	if task.Status == StatusInProgress {
+		return ErrInProgressDelete
+	}
+	err = s.repo.Delete(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete task: %w", err)
+	}
+	return nil
 }

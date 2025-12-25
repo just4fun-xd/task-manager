@@ -5,12 +5,12 @@ import (
 	"time"
 )
 
-type TaskStatus int
+type TaskStatus string
 
 const (
-	StatusNew TaskStatus = iota
-	StatusInProgress
-	StatusDone
+	StatusNew        TaskStatus = "new"
+	StatusInProgress TaskStatus = "in_progress"
+	StatusDone       TaskStatus = "done"
 )
 
 type Task struct {
