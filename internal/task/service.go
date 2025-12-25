@@ -62,12 +62,10 @@ func (s *Service) GetAllTasks(ctx context.Context) ([]Task, error) {
 }
 
 func (s *Service) UpdateTask(ctx context.Context, id int, name, description string, status TaskStatus) (*Task, error) {
-	// вначале достать задачу по id
 	task, err := s.GetTask(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get task for update: %w", err)
 	}
-	// проверяем валидность имени задачи
 	if strings.TrimSpace(name) == "" {
 		return nil, ErrEmptyTaskName
 	}

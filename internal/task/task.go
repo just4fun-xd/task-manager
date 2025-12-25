@@ -28,3 +28,12 @@ type TaskRepository interface {
 	Update(ctx context.Context, task *Task) error
 	Delete(ctx context.Context, id int) error
 }
+
+func (s TaskStatus) IsValid() bool {
+	switch s {
+	case StatusNew, StatusInProgress, StatusDone:
+		return true
+	default:
+		return false
+	}
+}

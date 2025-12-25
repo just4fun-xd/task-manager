@@ -25,6 +25,11 @@ type CreateTaskRequest struct {
 	Description string `json:"description"`
 }
 
+type UpdateTaskRequest struct {
+	CreateTaskRequest
+	Status task.TaskStatus `json:"status"`
+}
+
 func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	var req CreateTaskRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -48,10 +53,8 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetTask(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "invalid task id", http.StatusBadRequest)
+	id, ok := h.getId(w, r)
+	if !ok {
 		return
 	}
 	t, err := h.service.GetTask(r.Context(), id)
@@ -79,13 +82,11 @@ func (h *Handler) GetAllTasks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DeleteTask(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "invalid task id", http.StatusBadRequest)
+	id, ok := h.getId(w, r)
+	if !ok {
 		return
 	}
-	if err = h.service.DeleteTask(r.Context(), id); err != nil {
+	if err := h.service.DeleteTask(r.Context(), id); err != nil {
 		if errors.Is(err, task.ErrTaskNotFound) {
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
@@ -94,4 +95,55 @@ func (h *Handler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
+	id, ok := h.getId(w, r)
+	if !ok {
+		return
+	}
+
+	var req UpdateTaskRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if !req.Status.IsValid() {
+		http.Error(w, "invalid task status", http.StatusBadRequest)
+		return
+	}
+	t, err := h.service.UpdateTask(r.Context(), id, req.Name, req.Description, req.Status)
+	if err != nil {
+		if errors.Is(err, task.ErrEmptyTaskName) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if errors.Is(err, task.ErrNewTaskStatus) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if errors.Is(err, task.ErrDoneEdit) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if errors.Is(err, task.ErrTaskNotFound) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(t)
+}
+
+func (h *Handler) getId(w http.ResponseWriter, r *http.Request) (int, bool) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "invalid task id", http.StatusBadRequest)
+		return 0, false
+	}
+	return id, true
 }
