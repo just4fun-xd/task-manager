@@ -35,7 +35,6 @@ func run() int {
 		auth = fmt.Sprintf("%s:%s", cfg.DBUser, cfg.DBPassword)
 	}
 	dsn := fmt.Sprintf("postgres://%s@%s:%s/%s?sslmode=disable", auth, cfg.DBHost, cfg.DBPort, cfg.DBName)
-	fmt.Println(dsn)
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		log.Printf("Не удалось подключиться к базе данных: %v", err)
