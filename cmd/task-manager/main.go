@@ -58,6 +58,14 @@ func run() int {
 	}
 	log.Println("Подключение к PostgreSQL выполнено успешно")
 
+	initCtx, initCancel := context.WithTimeout(context.Background(), 2*time.Second)
+	err = createTable(initCtx, db)
+	initCancel()
+	if err != nil {
+		log.Printf("Ошибка создания таблицы в базе данных: %v", err)
+		return 1
+	}
+
 	repo := task.NewPostgresRepository(db)
 	service := task.NewService(repo)
 	handler := api.NewHandler(service)
@@ -109,4 +117,19 @@ func run() int {
 	log.Println("Сервер успешно остановлен")
 	log.Println("Приложение успешно завершило работу")
 	return 0
+}
+
+func createTable(ctx context.Context, db *sql.DB) error {
+	query := `CREATE TABLE IF NOT EXISTS tasks (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(256) NOT NULL,
+    description TEXT,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status TEXT DEFAULT 'new'
+	);`
+	_, err := db.ExecContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	return nil
 }
