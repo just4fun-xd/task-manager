@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS groups (
+id SERIAL PRIMARY KEY,
+name VARCHAR(256) NOT NULL
+);
+
+ALTER TABLE tasks ADD group_id int;
+ALTER TABLE tasks ADD CONSTRAINT fk_group FOREIGN KEY (group_id) REFERENCES groups(id);
