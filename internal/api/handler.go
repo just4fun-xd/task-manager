@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/just4fun-xd/task-manager/internal/task"
 )
 
@@ -58,7 +56,7 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetTask(w http.ResponseWriter, r *http.Request) {
-	id, ok := h.getId(w, r)
+	id, ok := GetId(w, r)
 	if !ok {
 		return
 	}
@@ -87,7 +85,7 @@ func (h *Handler) GetAllTasks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DeleteTask(w http.ResponseWriter, r *http.Request) {
-	id, ok := h.getId(w, r)
+	id, ok := GetId(w, r)
 	if !ok {
 		return
 	}
@@ -103,7 +101,7 @@ func (h *Handler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
-	id, ok := h.getId(w, r)
+	id, ok := GetId(w, r)
 	if !ok {
 		return
 	}
@@ -141,14 +139,4 @@ func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(t)
-}
-
-func (h *Handler) getId(w http.ResponseWriter, r *http.Request) (int, bool) {
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "invalid task id", http.StatusBadRequest)
-		return 0, false
-	}
-	return id, true
 }

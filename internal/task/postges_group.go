@@ -27,6 +27,10 @@ func (r *PostgresGroupRepository) Add(ctx context.Context, group *Group) error {
 	`
 	err := r.db.QueryRowContext(ctx, query, group.Name).Scan(&group.ID)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return fmt.Errorf("postgres.Add group: %w: ", ErrNotUniqGroup)
+		}
 		return fmt.Errorf("postgres.Add into groups: %w", err)
 	}
 	return nil
@@ -96,6 +100,10 @@ func (r *PostgresGroupRepository) Update(ctx context.Context, group *Group) erro
 	`
 	result, err := r.db.ExecContext(ctx, query, group.Name, group.ID)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return fmt.Errorf("postgres.Update group: %w", ErrNotUniqGroup)
+		}
 		return fmt.Errorf("failed to update group: %w", err)
 	}
 	rows, err := result.RowsAffected()

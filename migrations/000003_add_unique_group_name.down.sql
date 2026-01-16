@@ -1,0 +1,1 @@
+ALTER TABLE groups DROP CONSTRAINT IF EXISTS idx_groups_name_unique;

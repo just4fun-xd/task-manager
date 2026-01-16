@@ -28,11 +28,19 @@ var (
 	ErrDoneEdit         = errors.New("cannot edit done task")
 	ErrGroupNotFound    = errors.New("group not found")
 	ErrGroupHasTasks    = errors.New("group has tasks")
+	ErrNotUniqGroup     = errors.New("group has not unique name")
+	ErrEmptyGroupName   = errors.New("group name cannot be empty")
 )
 
 func (s *Service) CreateTask(ctx context.Context, name, description string, groupId *int) (*Task, error) {
 	if strings.TrimSpace(name) == "" {
 		return nil, ErrEmptyTaskName
+	}
+	if groupId != nil {
+		if _, err := s.groups.GetById(ctx, *groupId); err != nil {
+			return nil, fmt.Errorf("failed to get group: %w", err)
+		}
+
 	}
 
 	task := &Task{
@@ -50,6 +58,9 @@ func (s *Service) CreateTask(ctx context.Context, name, description string, grou
 }
 
 func (s *Service) GetTask(ctx context.Context, id int) (*Task, error) {
+	if id <= 0 {
+		return nil, fmt.Errorf("incorrect id: %d", id)
+	}
 	task, err := s.repo.GetById(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get task: %w", err)

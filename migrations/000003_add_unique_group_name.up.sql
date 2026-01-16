@@ -1,0 +1,1 @@
+ALTER TABLE groups ADD CONSTRAINT idx_groups_name_unique UNIQUE (name);
