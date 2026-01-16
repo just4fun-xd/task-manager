@@ -32,7 +32,7 @@ func (m *MockRepository) Delete(ctx context.Context, id int) error { return nil 
 func TestCreateTask_EmptyName(t *testing.T) {
 	mockRepo := &MockRepository{}
 	service := NewService(mockRepo)
-	_, err := service.CreateTask(context.Background(), "", "Описание")
+	_, err := service.CreateTask(context.Background(), "", "Описание", nil) // добавить
 
 	if !errors.Is(err, ErrEmptyTaskName) {
 		t.Errorf("ожидалась ошибка %v, получена %v", ErrEmptyTaskName, err)

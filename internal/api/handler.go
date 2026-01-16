@@ -23,6 +23,7 @@ func NewHandler(s *task.Service) *Handler {
 type CreateTaskRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
+	GroupID     *int   `json:"group_id"`
 }
 
 type UpdateTaskRequest struct {
@@ -37,8 +38,12 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t, err := h.service.CreateTask(r.Context(), req.Name, req.Description)
+	t, err := h.service.CreateTask(r.Context(), req.Name, req.Description, req.GroupID)
 	if err != nil {
+		if errors.Is(err, task.ErrEmptyTaskName) || errors.Is(err, task.ErrGroupNotFound) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

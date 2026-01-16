@@ -9,11 +9,15 @@ import (
 )
 
 type Service struct {
-	repo TaskRepository
+	repo   TaskRepository
+	groups GroupRepository
 }
 
-func NewService(repo TaskRepository) *Service {
-	return &Service{repo: repo}
+func NewService(repo TaskRepository, groups GroupRepository) *Service {
+	return &Service{
+		repo:   repo,
+		groups: groups,
+	}
 }
 
 var (
@@ -22,9 +26,11 @@ var (
 	ErrNewTaskStatus    = errors.New("cannot jump from New to Done: start working first")
 	ErrInProgressDelete = errors.New("cannot delete task with InProgress status")
 	ErrDoneEdit         = errors.New("cannot edit done task")
+	ErrGroupNotFound    = errors.New("group not found")
+	ErrGroupHasTasks    = errors.New("group has tasks")
 )
 
-func (s *Service) CreateTask(ctx context.Context, name, description string) (*Task, error) {
+func (s *Service) CreateTask(ctx context.Context, name, description string, groupId *int) (*Task, error) {
 	if strings.TrimSpace(name) == "" {
 		return nil, ErrEmptyTaskName
 	}
@@ -34,6 +40,7 @@ func (s *Service) CreateTask(ctx context.Context, name, description string) (*Ta
 		Description: description,
 		Created:     time.Now(),
 		Status:      StatusNew,
+		GroupID:     groupId,
 	}
 	err := s.repo.Add(ctx, task)
 	if err != nil {
@@ -47,10 +54,7 @@ func (s *Service) GetTask(ctx context.Context, id int) (*Task, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get task: %w", err)
 	}
-	if task == nil {
-		return nil, ErrTaskNotFound
-	}
-	return task, err
+	return task, nil
 }
 
 func (s *Service) GetAllTasks(ctx context.Context) ([]Task, error) {

@@ -19,6 +19,7 @@ type Task struct {
 	Description string     `json:"description"`
 	Created     time.Time  `json:"created"`
 	Status      TaskStatus `json:"status"`
+	GroupID     *int       `json:"group_id"`
 }
 
 type TaskRepository interface {

@@ -3,7 +3,10 @@ package task
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type PostgresRepository struct {
@@ -18,8 +21,8 @@ func NewPostgresRepository(db *sql.DB) *PostgresRepository {
 
 func (r *PostgresRepository) Add(ctx context.Context, task *Task) error {
 	query := `
-		INSERT INTO tasks (name, description, created, status)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO tasks (name, description, created, status, group_id)
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id
 	`
 	err := r.db.QueryRowContext(
@@ -29,8 +32,13 @@ func (r *PostgresRepository) Add(ctx context.Context, task *Task) error {
 		task.Description,
 		task.Created,
 		task.Status,
+		task.GroupID,
 	).Scan(&task.ID)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+			return fmt.Errorf("postgres.Add: insert task: %w", ErrGroupNotFound)
+		}
 		return fmt.Errorf("postgres.Add: insert task: %w", err)
 	}
 	return nil
@@ -39,7 +47,7 @@ func (r *PostgresRepository) Add(ctx context.Context, task *Task) error {
 func (r *PostgresRepository) GetById(ctx context.Context, id int) (*Task, error) {
 	var t Task
 	query := `
-		SELECT id, name, description, created, status 
+		SELECT id, name, description, created, status, group_id 
 		FROM tasks 
 		WHERE id = $1
 	`
@@ -49,10 +57,11 @@ func (r *PostgresRepository) GetById(ctx context.Context, id int) (*Task, error)
 		&t.Description,
 		&t.Created,
 		&t.Status,
+		&t.GroupID,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, nil
+			return nil, ErrTaskNotFound
 		}
 		return nil, fmt.Errorf("postgres.GetById: scan task id=%d: %w", id, err)
 	}
@@ -60,7 +69,7 @@ func (r *PostgresRepository) GetById(ctx context.Context, id int) (*Task, error)
 }
 
 func (r *PostgresRepository) GetAll(ctx context.Context) ([]Task, error) {
-	query := `SELECT id, name, description, created, status FROM tasks`
+	query := `SELECT id, name, description, created, status, group_id FROM tasks`
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("postgres.GetAll: query tasks: %w", err)
@@ -70,7 +79,7 @@ func (r *PostgresRepository) GetAll(ctx context.Context) ([]Task, error) {
 	var tasks []Task
 	for rows.Next() {
 		var t Task
-		err := rows.Scan(&t.ID, &t.Name, &t.Description, &t.Created, &t.Status)
+		err := rows.Scan(&t.ID, &t.Name, &t.Description, &t.Created, &t.Status, &t.GroupID)
 		if err != nil {
 			return nil, fmt.Errorf("postgres.GetAll: scan task row: %w", err)
 		}
@@ -85,8 +94,8 @@ func (r *PostgresRepository) GetAll(ctx context.Context) ([]Task, error) {
 func (r *PostgresRepository) Update(ctx context.Context, task *Task) error {
 	query := `
 		UPDATE tasks
-		SET name = $1, description = $2, status = $3 
-		WHERE id = $4
+		SET name = $1, description = $2, status = $3, group_id = $4 
+		WHERE id = $5
 	`
 	result, err := r.db.ExecContext(
 		ctx,
@@ -94,11 +103,17 @@ func (r *PostgresRepository) Update(ctx context.Context, task *Task) error {
 		task.Name,
 		task.Description,
 		task.Status,
+		task.GroupID,
 		task.ID,
 	)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+			return fmt.Errorf("postgres.Add: insert task: %w", ErrGroupNotFound)
+		}
 		return fmt.Errorf("failed to update task: %w", err)
 	}
+
 	rows, err := result.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to get rows affected: %w", err)

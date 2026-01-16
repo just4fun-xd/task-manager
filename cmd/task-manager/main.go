@@ -69,7 +69,8 @@ func run() int {
 	*/
 
 	repo := task.NewPostgresRepository(db)
-	service := task.NewService(repo)
+	groups := task.NewPostgresGroupRepository(db)
+	service := task.NewService(repo, groups)
 	handler := api.NewHandler(service)
 
 	r := chi.NewRouter()
