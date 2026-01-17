@@ -31,7 +31,7 @@ func (m *MockRepository) Delete(ctx context.Context, id int) error { return nil 
 
 func TestCreateTask_EmptyName(t *testing.T) {
 	mockRepo := &MockRepository{}
-	service := NewService(mockRepo)
+	service := NewService(mockRepo, nil)
 	_, err := service.CreateTask(context.Background(), "", "Описание", nil) // добавить
 
 	if !errors.Is(err, ErrEmptyTaskName) {
@@ -81,7 +81,7 @@ func TestUpdateTask_TableDriven(t *testing.T) {
 			mockRepo := &MockRepository{
 				TaskToReturn: &Task{Status: tt.existingStatus},
 			}
-			service := NewService(mockRepo)
+			service := NewService(mockRepo, nil)
 			_, err := service.UpdateTask(context.Background(), 1, tt.newName, "Описание", tt.newStatus)
 			if !errors.Is(err, tt.expectedErr) {
 				t.Fatalf("ожидалась ошибка %v, получена %v", tt.expectedErr, err)
