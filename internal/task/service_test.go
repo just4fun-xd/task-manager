@@ -82,7 +82,7 @@ func TestUpdateTask_TableDriven(t *testing.T) {
 				TaskToReturn: &Task{Status: tt.existingStatus},
 			}
 			service := NewService(mockRepo, nil)
-			_, err := service.UpdateTask(context.Background(), 1, tt.newName, "Описание", tt.newStatus)
+			_, err := service.UpdateTask(context.Background(), 1, tt.newName, "Описание", tt.newStatus, nil)
 			if !errors.Is(err, tt.expectedErr) {
 				t.Fatalf("ожидалась ошибка %v, получена %v", tt.expectedErr, err)
 			}

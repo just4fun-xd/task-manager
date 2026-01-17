@@ -109,7 +109,7 @@ func (r *PostgresRepository) Update(ctx context.Context, task *Task) error {
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
-			return fmt.Errorf("postgres.Add: insert task: %w", ErrGroupNotFound)
+			return fmt.Errorf("postgres.Update: insert task: %w", ErrGroupNotFound)
 		}
 		return fmt.Errorf("failed to update task: %w", err)
 	}

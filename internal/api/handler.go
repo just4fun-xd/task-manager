@@ -115,17 +115,13 @@ func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid task status", http.StatusBadRequest)
 		return
 	}
-	t, err := h.service.UpdateTask(r.Context(), id, req.Name, req.Description, req.Status)
+	t, err := h.service.UpdateTask(r.Context(), id, req.Name, req.Description, req.Status, req.GroupID)
 	if err != nil {
-		if errors.Is(err, task.ErrEmptyTaskName) {
+		if errors.Is(err, task.ErrEmptyTaskName) || errors.Is(err, task.ErrNewTaskStatus) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		if errors.Is(err, task.ErrNewTaskStatus) {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if errors.Is(err, task.ErrDoneEdit) {
+		if errors.Is(err, task.ErrDoneEdit) || errors.Is(err, task.ErrGroupNotFound) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}

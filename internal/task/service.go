@@ -76,7 +76,7 @@ func (s *Service) GetAllTasks(ctx context.Context) ([]Task, error) {
 	return tasks, nil
 }
 
-func (s *Service) UpdateTask(ctx context.Context, id int, name, description string, status TaskStatus) (*Task, error) {
+func (s *Service) UpdateTask(ctx context.Context, id int, name, description string, status TaskStatus, groupId *int) (*Task, error) {
 	task, err := s.GetTask(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get task for update: %w", err)
@@ -94,6 +94,7 @@ func (s *Service) UpdateTask(ctx context.Context, id int, name, description stri
 	task.Name = name
 	task.Description = description
 	task.Status = status
+	task.GroupID = groupId
 
 	err = s.repo.Update(ctx, task)
 	if err != nil {

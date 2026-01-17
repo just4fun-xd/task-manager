@@ -74,3 +74,57 @@ func (h *GroupHandler) UpdateGroup(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(g)
 }
+
+func (h *GroupHandler) ListGroups(w http.ResponseWriter, r *http.Request) {
+	groups, err := h.service.ListGroup(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if groups == nil {
+		groups = []task.Group{}
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(groups)
+}
+
+func (h *GroupHandler) GetGroup(w http.ResponseWriter, r *http.Request) {
+	id, ok := GetId(w, r)
+	if !ok {
+		return
+	}
+	g, err := h.service.GetGroup(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, task.ErrGroupNotFound) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(g)
+}
+
+func (h *GroupHandler) DeleteGroup(w http.ResponseWriter, r *http.Request) {
+	id, ok := GetId(w, r)
+	if !ok {
+		return
+	}
+	err := h.service.DeleteGroup(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, task.ErrGroupHasTasks) {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+		if errors.Is(err, task.ErrGroupNotFound) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

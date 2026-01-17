@@ -72,6 +72,7 @@ func run() int {
 	groups := task.NewPostgresGroupRepository(db)
 	service := task.NewService(repo, groups)
 	handler := api.NewHandler(service)
+	handlerGroup := api.NewGroupHandler(service)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -82,6 +83,14 @@ func run() int {
 		r.Get("/{id}", handler.GetTask)
 		r.Put("/{id}", handler.UpdateTask)
 		r.Delete("/{id}", handler.DeleteTask)
+	})
+
+	r.Route("/groups", func(r chi.Router) {
+		r.Post("/", handlerGroup.CreateGroup)
+		r.Get("/", handlerGroup.ListGroups)
+		r.Get("/{id}", handlerGroup.GetGroup)
+		r.Put("/{id}", handlerGroup.UpdateGroup)
+		r.Delete("/{id}", handlerGroup.DeleteGroup)
 	})
 
 	log.Printf("Запуск сервера на порту :%s...", cfg.ServerPort)
