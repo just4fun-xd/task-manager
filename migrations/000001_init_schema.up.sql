@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS tasks (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(256) NOT NULL,
+    description TEXT, 
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status TEXT DEFAULT 'new'
+)
