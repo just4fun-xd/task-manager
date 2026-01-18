@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/just4fun-xd/task-manager/internal/task"
 )
@@ -74,7 +75,18 @@ func (h *Handler) GetTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetAllTasks(w http.ResponseWriter, r *http.Request) {
-	t, err := h.service.GetAllTasks(r.Context())
+	groupIdStr := r.URL.Query().Get("group_id")
+	var groupId *int
+	if groupIdStr != "" {
+		groupIdTemp, err := strconv.Atoi(groupIdStr)
+		if err != nil {
+			http.Error(w, "invalid group_id parameter", http.StatusBadRequest)
+			return
+		}
+		groupId = &groupIdTemp
+	}
+
+	t, err := h.service.GetAllTasks(r.Context(), groupId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

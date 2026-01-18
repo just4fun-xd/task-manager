@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -68,15 +69,25 @@ func (r *PostgresRepository) GetById(ctx context.Context, id int) (*Task, error)
 	return &t, nil
 }
 
-func (r *PostgresRepository) GetAll(ctx context.Context) ([]Task, error) {
+func (r *PostgresRepository) GetAll(ctx context.Context, groupId *int) ([]Task, error) {
 	query := `SELECT id, name, description, created, status, group_id FROM tasks`
-	rows, err := r.db.QueryContext(ctx, query)
+	var args []any
+	conditions := []string{}
+	if groupId != nil {
+		args = append(args, *groupId)
+		conditions = append(conditions, fmt.Sprintf("group_id = $%d", len(args)))
+
+	}
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("postgres.GetAll: query tasks: %w", err)
 	}
 	defer rows.Close()
 
-	var tasks []Task
+	tasks := []Task{}
 	for rows.Next() {
 		var t Task
 		err := rows.Scan(&t.ID, &t.Name, &t.Description, &t.Created, &t.Status, &t.GroupID)

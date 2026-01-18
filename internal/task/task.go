@@ -24,7 +24,7 @@ type Task struct {
 
 type TaskRepository interface {
 	Add(ctx context.Context, task *Task) error
-	GetAll(ctx context.Context) ([]Task, error)
+	GetAll(ctx context.Context, groupId *int) ([]Task, error)
 	GetById(ctx context.Context, id int) (*Task, error)
 	Update(ctx context.Context, task *Task) error
 	Delete(ctx context.Context, id int) error

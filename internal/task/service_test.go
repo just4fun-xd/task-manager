@@ -7,10 +7,14 @@ import (
 )
 
 type MockRepository struct {
-	AddCalled    bool
-	UpdateCalled bool
-	TaskToReturn *Task
-	UpdatedTask  *Task
+	AddCalled        bool
+	UpdateCalled     bool
+	TaskToReturn     *Task
+	UpdatedTask      *Task
+	GetAllCalledWith *int
+}
+
+type MockGroupRepository struct {
 }
 
 func (m *MockRepository) Add(ctx context.Context, task *Task) error {
@@ -18,7 +22,10 @@ func (m *MockRepository) Add(ctx context.Context, task *Task) error {
 	return nil
 }
 
-func (m *MockRepository) GetAll(ctx context.Context) ([]Task, error) { return nil, nil }
+func (m *MockRepository) GetAll(ctx context.Context, groupId *int) ([]Task, error) {
+	m.GetAllCalledWith = groupId
+	return nil, nil
+}
 func (m *MockRepository) GetById(ctx context.Context, id int) (*Task, error) {
 	return m.TaskToReturn, nil
 }
@@ -39,6 +46,16 @@ func TestCreateTask_EmptyName(t *testing.T) {
 	}
 	if mockRepo.AddCalled {
 		t.Error("репозиторий не должен был вызваться при пустом имени")
+	}
+}
+
+func TestGetAllTasks_Filtering(t *testing.T) {
+	mockRepo := &MockRepository{}
+	service := NewService(mockRepo, nil)
+	groupId := 5
+	_, _ = service.GetAllTasks(context.Background(), &groupId)
+	if mockRepo.GetAllCalledWith != &groupId {
+		t.Errorf("ожидалось groupId = %w, получена %w", groupId, mockRepo.GetAllCalledWith)
 	}
 }
 

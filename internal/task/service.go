@@ -68,8 +68,14 @@ func (s *Service) GetTask(ctx context.Context, id int) (*Task, error) {
 	return task, nil
 }
 
-func (s *Service) GetAllTasks(ctx context.Context) ([]Task, error) {
-	tasks, err := s.repo.GetAll(ctx)
+func (s *Service) GetAllTasks(ctx context.Context, groupId *int) ([]Task, error) {
+	if groupId != nil {
+		_, err := s.groups.GetById(ctx, *groupId)
+		if err != nil {
+			return nil, fmt.Errorf("fillter validation: group not found: %w", err)
+		}
+	}
+	tasks, err := s.repo.GetAll(ctx, groupId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all tasks: %w", err)
 	}
