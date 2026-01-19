@@ -12,9 +12,11 @@ type MockRepository struct {
 	TaskToReturn     *Task
 	UpdatedTask      *Task
 	GetAllCalledWith *int
+	GetAllCalled     bool
 }
 
 type MockGroupRepository struct {
+	ErrorToReturn error
 }
 
 func (m *MockRepository) Add(ctx context.Context, task *Task) error {
@@ -23,6 +25,7 @@ func (m *MockRepository) Add(ctx context.Context, task *Task) error {
 }
 
 func (m *MockRepository) GetAll(ctx context.Context, groupId *int) ([]Task, error) {
+	m.GetAllCalled = true
 	m.GetAllCalledWith = groupId
 	return nil, nil
 }
@@ -36,10 +39,28 @@ func (m *MockRepository) Update(ctx context.Context, task *Task) error {
 }
 func (m *MockRepository) Delete(ctx context.Context, id int) error { return nil }
 
+func (m *MockGroupRepository) Add(ctx context.Context, group *Group) error { return nil }
+func (m *MockGroupRepository) GetAll(ctx context.Context) ([]Group, error) { return nil, nil }
+func (m *MockGroupRepository) GetById(ctx context.Context, id int) (*Group, error) {
+	return nil, m.ErrorToReturn
+}
+func (m *MockGroupRepository) Update(ctx context.Context, group *Group) error { return nil }
+func (m *MockGroupRepository) Delete(ctx context.Context, id int) error       { return nil }
+
+/*
+type GroupRepository interface {
+	Add(ctx context.Context, group *Group) error +
+	GetAll(ctx context.Context) ([]Group, error) +
+	GetById(ctx context.Context, id int) (*Group, error) +
+	Update(ctx context.Context, group *Group) error +
+	Delete(ctx context.Context, id int) error
+}
+*/
+
 func TestCreateTask_EmptyName(t *testing.T) {
 	mockRepo := &MockRepository{}
 	service := NewService(mockRepo, nil)
-	_, err := service.CreateTask(context.Background(), "", "Описание", nil) // добавить
+	_, err := service.CreateTask(context.Background(), "", "Описание", nil)
 
 	if !errors.Is(err, ErrEmptyTaskName) {
 		t.Errorf("ожидалась ошибка %v, получена %v", ErrEmptyTaskName, err)
@@ -49,13 +70,37 @@ func TestCreateTask_EmptyName(t *testing.T) {
 	}
 }
 
+func TestGetAllTasks_GroupNotFound(t *testing.T) {
+	mockRepo := &MockRepository{}
+	mockGroupRepository := &MockGroupRepository{
+		ErrorToReturn: errors.New("group not found"),
+	}
+	service := NewService(mockRepo, mockGroupRepository)
+	id := 10
+	tasks, err := service.GetAllTasks(context.Background(), &id)
+	if !errors.Is(err, mockGroupRepository.ErrorToReturn) {
+		t.Errorf("ожидалось error = %v, получена %v", mockGroupRepository.ErrorToReturn, err)
+	}
+	if len(tasks) != 0 {
+		t.Errorf("ожидалось 0 задач, получено %d", len(tasks))
+	}
+	if mockRepo.GetAllCalled == true {
+		t.Error("Метод GetAll был вызван")
+	}
+
+}
+
 func TestGetAllTasks_Filtering(t *testing.T) {
 	mockRepo := &MockRepository{}
-	service := NewService(mockRepo, nil)
+	mockGroupRepository := &MockGroupRepository{}
+	service := NewService(mockRepo, mockGroupRepository)
 	groupId := 5
 	_, _ = service.GetAllTasks(context.Background(), &groupId)
-	if mockRepo.GetAllCalledWith != &groupId {
-		t.Errorf("ожидалось groupId = %w, получена %w", groupId, mockRepo.GetAllCalledWith)
+	if mockRepo.GetAllCalledWith == nil {
+		t.Error("ожидалось groupId != nil ")
+	}
+	if *mockRepo.GetAllCalledWith != groupId {
+		t.Errorf("ожидалось groupId = %d, получена %d", groupId, *mockRepo.GetAllCalledWith)
 	}
 }
 
