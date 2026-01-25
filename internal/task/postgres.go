@@ -70,7 +70,13 @@ func (r *PostgresRepository) GetById(ctx context.Context, id int) (*Task, error)
 }
 
 func (r *PostgresRepository) GetAll(ctx context.Context, groupId *int) ([]Task, error) {
-	query := `SELECT id, name, description, created, status, group_id FROM tasks`
+	query := `
+	SELECT 
+		t.id, t.name, t.description, t.created, t.status, t.group_id,
+		g.name as group_name
+	FROM tasks t
+	JOIN LEFT groups g ON t.group_id = g.id
+	`
 	var args []any
 	conditions := []string{}
 	if groupId != nil {

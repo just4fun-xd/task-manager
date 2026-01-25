@@ -3,6 +3,7 @@ package task
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 )
 
@@ -16,11 +17,13 @@ type MockRepository struct {
 }
 
 type MockGroupRepository struct {
+	GroupToReturn *Group
 	ErrorToReturn error
 }
 
 func (m *MockRepository) Add(ctx context.Context, task *Task) error {
 	m.AddCalled = true
+	m.TaskToReturn = task
 	return nil
 }
 
@@ -47,16 +50,6 @@ func (m *MockGroupRepository) GetById(ctx context.Context, id int) (*Group, erro
 func (m *MockGroupRepository) Update(ctx context.Context, group *Group) error { return nil }
 func (m *MockGroupRepository) Delete(ctx context.Context, id int) error       { return nil }
 
-/*
-type GroupRepository interface {
-	Add(ctx context.Context, group *Group) error +
-	GetAll(ctx context.Context) ([]Group, error) +
-	GetById(ctx context.Context, id int) (*Group, error) +
-	Update(ctx context.Context, group *Group) error +
-	Delete(ctx context.Context, id int) error
-}
-*/
-
 func TestCreateTask_EmptyName(t *testing.T) {
 	mockRepo := &MockRepository{}
 	service := NewService(mockRepo, nil)
@@ -67,6 +60,45 @@ func TestCreateTask_EmptyName(t *testing.T) {
 	}
 	if mockRepo.AddCalled {
 		t.Error("репозиторий не должен был вызваться при пустом имени")
+	}
+
+}
+
+func TestCreateTaskWithGroup(t *testing.T) {
+
+	mockRepo := &MockRepository{}
+	mockGroupRepo := &MockGroupRepository{GroupToReturn: &Group{ID: 1, Name: "Test"}}
+	name := "Купить хлеб"
+	desc := "Бородинский"
+	groupID := 1
+	service := NewService(mockRepo, mockGroupRepo)
+	task, err := service.CreateTask(context.Background(), name, desc, &groupID)
+	if err != nil {
+		t.Fatalf("ожидалось error = nil, получено: %v", err)
+	}
+	if task.Name != name || task.Description != desc || task.GroupID == nil || *task.GroupID != groupID {
+		t.Errorf("Данные задачи не совпадают!")
+		t.Errorf("Ожидалось: Name=%q, Desc=%q, GroupID=%d", name, desc, groupID)
+
+		gotID := 0
+		if task.GroupID != nil {
+			gotID = *task.GroupID
+		}
+		t.Errorf("Получено:  Name=%q, Desc=%q, GroupID=%d", task.Name, task.Description, gotID)
+	}
+	if !mockRepo.AddCalled {
+		t.Fatal("Метод Add репозитория не был вызван!")
+	}
+	if mockRepo.TaskToReturn == nil {
+		t.Fatal("репозиторий был вызван, но задача не была передана (nil)")
+	}
+	gotID := "nil"
+	if mockRepo.TaskToReturn.GroupID != nil {
+		gotID = fmt.Sprintf("%d", *mockRepo.TaskToReturn.GroupID)
+	}
+	if mockRepo.TaskToReturn.Name != name || mockRepo.TaskToReturn.GroupID == nil || *mockRepo.TaskToReturn.GroupID != groupID {
+		t.Errorf("В репозиторий ушли неверные данные! Ожидали Name=%s, ID=%d. Получили Name=%s, ID=%s",
+			name, groupID, mockRepo.TaskToReturn.Name, gotID)
 	}
 }
 
