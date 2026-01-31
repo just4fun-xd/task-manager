@@ -10,6 +10,7 @@ import (
 type MockRepository struct {
 	AddCalled        bool
 	UpdateCalled     bool
+	AddedTask        *Task
 	TaskToReturn     *Task
 	UpdatedTask      *Task
 	GetAllCalledWith *int
@@ -17,13 +18,15 @@ type MockRepository struct {
 }
 
 type MockGroupRepository struct {
+	AddCalled     bool
+	AddedGroup    *Group
 	GroupToReturn *Group
 	ErrorToReturn error
 }
 
 func (m *MockRepository) Add(ctx context.Context, task *Task) error {
 	m.AddCalled = true
-	m.TaskToReturn = task
+	m.AddedTask = task
 	return nil
 }
 
@@ -42,10 +45,14 @@ func (m *MockRepository) Update(ctx context.Context, task *Task) error {
 }
 func (m *MockRepository) Delete(ctx context.Context, id int) error { return nil }
 
-func (m *MockGroupRepository) Add(ctx context.Context, group *Group) error { return nil }
+func (m *MockGroupRepository) Add(ctx context.Context, group *Group) error {
+	m.AddCalled = true
+	m.AddedGroup = group
+	return m.ErrorToReturn
+}
 func (m *MockGroupRepository) GetAll(ctx context.Context) ([]Group, error) { return nil, nil }
 func (m *MockGroupRepository) GetById(ctx context.Context, id int) (*Group, error) {
-	return nil, m.ErrorToReturn
+	return m.GroupToReturn, m.ErrorToReturn
 }
 func (m *MockGroupRepository) Update(ctx context.Context, group *Group) error { return nil }
 func (m *MockGroupRepository) Delete(ctx context.Context, id int) error       { return nil }
@@ -60,6 +67,51 @@ func TestCreateTask_EmptyName(t *testing.T) {
 	}
 	if mockRepo.AddCalled {
 		t.Error("репозиторий не должен был вызваться при пустом имени")
+	}
+
+}
+
+func TestCreateGroup_DuplicateName(t *testing.T) {
+	mockRepo := &MockRepository{}
+	mockGroupRepo := &MockGroupRepository{
+		ErrorToReturn: ErrNotUniqGroup,
+	}
+	service := NewService(mockRepo, mockGroupRepo)
+	groupName := "DuplicateGroupName"
+	_, err := service.CreateGroup(context.Background(), groupName)
+	if !errors.Is(err, ErrNotUniqGroup) {
+		t.Errorf("ожидалась ошибка %v, получена %v", ErrNotUniqGroup, err)
+	}
+	if !mockGroupRepo.AddCalled {
+		t.Error("репозиторий групп не был вызван")
+	}
+	if mockGroupRepo.AddedGroup == nil {
+		t.Fatalf("в репозиторий не была передана группа (nil)")
+	}
+	if mockGroupRepo.AddedGroup.Name != groupName {
+		t.Errorf("ожидалось имя группы %q, получили %q", groupName, mockGroupRepo.AddedGroup.Name)
+	}
+}
+
+func TestCreateGroup_Success(t *testing.T) {
+	mockRepo := &MockRepository{}
+	mockGroupRepo := &MockGroupRepository{}
+	service := NewService(mockRepo, mockGroupRepo)
+
+	groupName := "Работа"
+
+	_, err := service.CreateGroup(context.Background(), groupName)
+	if err != nil {
+		t.Errorf("не ожидалось ошибки, получена: %v", err)
+	}
+	if !mockGroupRepo.AddCalled {
+		t.Error("репозиторий групп не был вызван")
+	}
+	if mockGroupRepo.AddedGroup == nil {
+		t.Fatalf("в репозиторий не была передана группа (nil)")
+	}
+	if mockGroupRepo.AddedGroup.Name != groupName {
+		t.Errorf("ожидалось имя группы %q, получили %q", groupName, mockGroupRepo.AddedGroup.Name)
 	}
 
 }
@@ -89,34 +141,34 @@ func TestCreateTaskWithGroup(t *testing.T) {
 	if !mockRepo.AddCalled {
 		t.Fatal("Метод Add репозитория не был вызван!")
 	}
-	if mockRepo.TaskToReturn == nil {
+	if mockRepo.AddedTask == nil {
 		t.Fatal("репозиторий был вызван, но задача не была передана (nil)")
 	}
 	gotID := "nil"
-	if mockRepo.TaskToReturn.GroupID != nil {
-		gotID = fmt.Sprintf("%d", *mockRepo.TaskToReturn.GroupID)
+	if mockRepo.AddedTask.GroupID != nil {
+		gotID = fmt.Sprintf("%d", *mockRepo.AddedTask.GroupID)
 	}
-	if mockRepo.TaskToReturn.Name != name || mockRepo.TaskToReturn.GroupID == nil || *mockRepo.TaskToReturn.GroupID != groupID {
+	if mockRepo.AddedTask.Name != name || mockRepo.AddedTask.GroupID == nil || *mockRepo.AddedTask.GroupID != groupID {
 		t.Errorf("В репозиторий ушли неверные данные! Ожидали Name=%s, ID=%d. Получили Name=%s, ID=%s",
-			name, groupID, mockRepo.TaskToReturn.Name, gotID)
+			name, groupID, mockRepo.AddedTask.Name, gotID)
 	}
 }
 
 func TestGetAllTasks_GroupNotFound(t *testing.T) {
 	mockRepo := &MockRepository{}
-	mockGroupRepository := &MockGroupRepository{
+	mockGroupRepo := &MockGroupRepository{
 		ErrorToReturn: errors.New("group not found"),
 	}
-	service := NewService(mockRepo, mockGroupRepository)
+	service := NewService(mockRepo, mockGroupRepo)
 	id := 10
 	tasks, err := service.GetAllTasks(context.Background(), &id)
-	if !errors.Is(err, mockGroupRepository.ErrorToReturn) {
-		t.Errorf("ожидалось error = %v, получена %v", mockGroupRepository.ErrorToReturn, err)
+	if !errors.Is(err, mockGroupRepo.ErrorToReturn) {
+		t.Errorf("ожидалось error = %v, получена %v", mockGroupRepo.ErrorToReturn, err)
 	}
 	if len(tasks) != 0 {
 		t.Errorf("ожидалось 0 задач, получено %d", len(tasks))
 	}
-	if mockRepo.GetAllCalled == true {
+	if mockRepo.GetAllCalled {
 		t.Error("Метод GetAll был вызван")
 	}
 
@@ -124,8 +176,8 @@ func TestGetAllTasks_GroupNotFound(t *testing.T) {
 
 func TestGetAllTasks_Filtering(t *testing.T) {
 	mockRepo := &MockRepository{}
-	mockGroupRepository := &MockGroupRepository{}
-	service := NewService(mockRepo, mockGroupRepository)
+	mockGroupRepo := &MockGroupRepository{}
+	service := NewService(mockRepo, mockGroupRepo)
 	groupId := 5
 	_, _ = service.GetAllTasks(context.Background(), &groupId)
 	if mockRepo.GetAllCalledWith == nil {
@@ -176,7 +228,8 @@ func TestUpdateTask_TableDriven(t *testing.T) {
 				TaskToReturn: &Task{Status: tt.existingStatus},
 			}
 			service := NewService(mockRepo, nil)
-			_, err := service.UpdateTask(context.Background(), 1, tt.newName, "Описание", tt.newStatus, nil)
+			const testDesc = "Описание задачи"
+			_, err := service.UpdateTask(context.Background(), 1, tt.newName, testDesc, tt.newStatus, nil)
 			if !errors.Is(err, tt.expectedErr) {
 				t.Fatalf("ожидалась ошибка %v, получена %v", tt.expectedErr, err)
 			}
@@ -186,6 +239,12 @@ func TestUpdateTask_TableDriven(t *testing.T) {
 			if tt.wantUpdate && mockRepo.UpdatedTask != nil {
 				if mockRepo.UpdatedTask.Name != tt.newName {
 					t.Errorf("в базу ушло имя %v, а ожидали %v", mockRepo.UpdatedTask.Name, tt.newName)
+				}
+				if mockRepo.UpdatedTask.Description != testDesc {
+					t.Errorf("в базу ушло описание: %v, а ожидали: %v", mockRepo.UpdatedTask.Description, testDesc)
+				}
+				if mockRepo.UpdatedTask.Status != tt.newStatus {
+					t.Errorf("в базу ушел статус: %v, а ожидали: %v", mockRepo.UpdatedTask.Status, tt.newStatus)
 				}
 			}
 		})

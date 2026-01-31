@@ -96,7 +96,7 @@ func (r *PostgresRepository) GetAll(ctx context.Context, groupId *int) ([]Task, 
 	tasks := []Task{}
 	for rows.Next() {
 		var t Task
-		err := rows.Scan(&t.ID, &t.Name, &t.Description, &t.Created, &t.Status, &t.GroupID)
+		err := rows.Scan(&t.ID, &t.Name, &t.Description, &t.Created, &t.Status, &t.GroupID, &t.GroupName)
 		if err != nil {
 			return nil, fmt.Errorf("postgres.GetAll: scan task row: %w", err)
 		}
