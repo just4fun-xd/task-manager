@@ -68,8 +68,7 @@ jobs:
                 port: ${{ secrets.SSH_PORT }}
                 script: |
                     cd ~/task-manager
+                    export GITHUB_ACTOR=${{ github.actor }}
                     echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
                     docker compose -f docker-compose.prod.yaml pull
                     docker compose -f docker-compose.prod.yaml up -d
-
-
