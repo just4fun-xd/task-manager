@@ -68,63 +68,60 @@
 ## 📄 Примеры запросов (JSON)
 
 ### Создание задачи (`POST /tasks`)
-
-    ```json
-    {
+```json
+{
     "name": "Купить малинку",
     "description": "Нужна еще одна Raspberry Pi для кластера",
     "group_id": 1
-    }
-    ```
+}
+```
 
 ### Обновление задачи (PUT /tasks/{id})
 
 Доступные статусы: new, in_progress, done.
-
-    ```json
-    {
+```json
+{
     "name": "Купить малинку",
     "description": "Заказал на маркетплейсе",
     "status": "in_progress",
     "group_id": 1
-    }
-    ```
+}
+```
 
 ### Создание группы (POST /groups)
-
-    ```json
-    {
+```json
+{
     "name": "Покупки"
-    }
-    ```
+}
+```
 
 ## ⚙️ Установка и запуск
 
 ### 💻 Локальная разработка
 
 1. **Склонируйте репозиторий:**
-   ```bash
-   git clone [https://github.com/just4fun-xd/task-manager.git](https://github.com/just4fun-xd/task-manager.git)
-   cd task-manager
-   ```
+```bash
+git clone [https://github.com/just4fun-xd/task-manager.git](https://github.com/just4fun-xd/task-manager.git)
+cd task-manager
+```
 
 2. **Настройте переменные окружения:**
-    ```bash
-    cp .env.example .env
-    ```
-    Отредактируйте .env, указав свои данные для БД.
+```bash
+cp .env.example .env
+```
+Отредактируйте .env, указав свои данные для БД.
 
 3. **Запустите контейнеры:**
-    ```bash
-    docker-compose up -d
-    ```
+```bash
+docker-compose up -d
+```
 
 ## 🧪 Тестирование
 
-    Для запуска модульных тестов (сервисный слой и логика статусов):
-    ```bash
-    go test ./internal/task/...
-    ```
+Для запуска модульных тестов (сервисный слой и логика статусов):
+```bash
+go test ./internal/task/...
+```
 
 ## 📝 Лицензия
 Проект распространяется под лицензией MIT.
